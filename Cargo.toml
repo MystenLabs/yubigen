@@ -1,0 +1,17 @@
+[package]
+name = "yubigen"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+yubikey = "0.8.0" 
+x509 = "0.2.0"
+openssl = "0.10.37"
+fastcrypto = "0.1.7"
+sui-types = {git = "https://github.com/MystenLabs/sui", branch="main" }
+shared-crypto = {git = "https://github.com/MystenLabs/sui", branch="main" }
+anyhow = "1.0.79"
+bcs = "0.1.6"
+p256 = "0.13.2"

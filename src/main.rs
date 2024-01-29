@@ -1,17 +1,16 @@
 use anyhow::anyhow;
 use fastcrypto::encoding::{Base64, Encoding, Hex};
-use fastcrypto::hash::{Blake2b256, HashFunction};
+use fastcrypto::hash::{Blake2b256, HashFunction, Sha256};
 use fastcrypto::secp256r1::{Secp256r1PublicKey, Secp256r1Signature};
-use fastcrypto::traits::ToFromBytes;
-use openssl::bn::BigNumContext;
-use openssl::ec::{EcGroup, PointConversionForm};
-use openssl::nid::Nid;
-use openssl::{ec::*, ecdsa};
+use fastcrypto::traits::{ToFromBytes, VerifyingKey};
+use p256::ecdsa::signature::hazmat::PrehashVerifier;
 use p256::ecdsa::Signature as p256ECDSA;
+use p256::pkcs8::DecodePublicKey;
 use shared_crypto::intent::{Intent, IntentMessage};
 use sui_types::transaction::TransactionData;
 
 use sui_types::crypto::SignatureScheme;
+use yubikey::certificate::yubikey_signer::Signer;
 use yubikey::piv::generate;
 use yubikey::piv::sign_data;
 use yubikey::piv::{AlgorithmId, RetiredSlotId, SlotId};
@@ -24,7 +23,6 @@ use yubikey::{PinPolicy, TouchPolicy};
 // Prints out Sui Signature
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let intent: Option<Intent> = Some(Intent::sui_transaction());
     // Transfer 0.1 SUI to another address
     let data = "AAABACD8TtqP+CanT90KxVMvAJOC0lecAdSsc417t+BpEqpWLwEBAQABAAD8TtqP+CanT90KxVMvAJOC0lecAdSsc417t+BpEqpWLwGWEY+N+TjwPj1XWX74uzh2/hLz/2CuA6EXzQXvRErZkgDE7wAAAAAAIHt/CrkuVzMPkhRiUl3+hQqx5M0ru3zpJkS65bnzn2hY/E7aj/gmp0/dCsVTLwCTgtJXnAHUrHONe7fgaRKqVi/oAwAAAAAAAICEHgAAAAAAAA==";
     let mut piv: yubikey::YubiKey = yubikey::YubiKey::open()?;
@@ -43,31 +41,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     PinPolicy::Once,
     //     TouchPolicy::Cached,
     // )?;
-    // println!("Key generated successfully in slot 15.");
-
+    println!("Key generated successfully in slot 15.");
     // End of TODO
-
+    // println!("Public key: {:?}", p);
     // let cert = certificate::Certificate::read(&mut piv, slot);
     let metadata = yubikey::piv::metadata(&mut piv, slot)?;
-
-    let mut ctx = BigNumContext::new()?;
     let temp_pub = metadata
         .public
         .ok_or_else(|| anyhow!("No public key information available."))?;
+
     let public_key_bytes = temp_pub
         .subject_public_key
         .as_bytes()
         .ok_or_else(|| anyhow!("Public key bytes could not be retrieved."))?;
 
-    let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
-    let point = EcPoint::from_bytes(&group, &public_key_bytes, &mut ctx)?;
-    let pkey = EcKey::from_public_key(&group, &point)?;
-    let pkey_compact = pkey
-        .public_key()
-        .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
-        .unwrap();
+    let vk =
+        p256::ecdsa::VerifyingKey::from_sec1_bytes(public_key_bytes).expect("ecdsa key expected");
+    let binding = vk.to_encoded_point(true);
+    let pk_bytes = binding.as_bytes();
+    println!("Public key bytes: {:?}", pk_bytes);
 
-    let secp_pk = Secp256r1PublicKey::from_bytes(&pkey_compact).unwrap();
+    let secp_pk = Secp256r1PublicKey::from_bytes(pk_bytes).unwrap();
     let mut sui_pk = vec![SignatureScheme::Secp256r1.flag()];
     sui_pk.extend(secp_pk.as_ref());
     println!("Secp256r1 Pubkey : {}", &secp_pk);
@@ -79,41 +73,70 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Sui Address: 0x{}", Hex::encode(sui_address));
 
     println!("Raw tx_bytes to execute: {}", data);
-    let intent = intent.unwrap_or_else(Intent::sui_transaction);
     let msg: TransactionData = bcs::from_bytes(
-        &Base64::decode(&data)
+        &Base64::decode(data)
             .map_err(|e| anyhow!("Cannot deserialize data as TransactionData {:?}", e))?,
     )?;
-    let intent_msg = IntentMessage::new(intent, msg);
+    let intent_msg = IntentMessage::new(Intent::sui_transaction(), msg);
     let mut hasher = Blake2b256::new();
     hasher.update(bcs::to_bytes(&intent_msg)?);
     let digest = hasher.finalize().digest;
     println!("Digest to sign: {:?}", Hex::encode(digest));
     let digest_vec_bytes = digest.to_vec();
-    //println!("Digest vect {:?}", digest_vec_bytes);
 
-    // Using Default yubikey pin (TODO - add for user input)
-    piv.verify_pin("123456".as_bytes());
-    let hi = b"Hello";
-    let sig_bytes = sign_data(&mut piv, hi, algorithm, slot);
+    // // Using Default yubikey pin (TODO - add for user input)
+    let _ = piv.verify_pin("123456".as_bytes());
 
-    // let sig_bytes = sign_data(&mut piv, &digest_vec_bytes, algorithm, slot);
-    let sig_bytes_der: &[u8] = &sig_bytes.map(|b| b.to_vec()).unwrap_or_default();
-    // println!("{:?}", sig_bytes_der);
+    let sig_bytes = sign_data(&mut piv, &digest_vec_bytes, algorithm, slot).unwrap();
+    println!("Signature bytes {:?}", sig_bytes);
 
-    let secpsig = p256ECDSA::from_der(sig_bytes_der)?;
-    let normalized_sig = secpsig.normalize_s().unwrap_or(secpsig);
+    // the signature is ASN.1 BER encoded, there are 4 forms:
+    // [48, 69, 2, 33, 0, 32_byte_r, 2, 33, 0, 32_byte_s]
+    // [48, 69, 2, 33, 0, 32_byte_r, 2, 32, 32_byte_s]
+    // [48, 69, 2, 32, 32_byte_r, 2, 33, 0, 32_byte_s]
+    // [48, 69, 2, 32, 32_byte_r, 2, 32, 32_byte_s]
+    let mut output = Vec::new();
+    // the r bytes starts to read from either 4 or 5 depending on the length value at index 3
+    if sig_bytes[3] == 33 {
+        if sig_bytes[4] != 0 {
+            panic!("Invalid form");
+        }
+        output.extend(&sig_bytes[5..(5 + 32)]);
+    } else if sig_bytes[3] == 32 {
+        output.extend(&sig_bytes[4..(4 + 32)]);
+    } else {
+        panic!("Invalid form");
+    }
+    // the last 32 bytes are s bytes
+    output.extend(&sig_bytes[&sig_bytes.len() - 32..]);
 
-    println!("Un-Normalized Sig Bytes {:?}", secpsig.to_bytes());
+    let sig = p256::ecdsa::Signature::from_slice(&output).unwrap();
+    let normalized_sig = sig.normalize_s().unwrap_or(sig);
+    println!("{:?}", sig);
+    println!("{:?}", normalized_sig);
+
+    let res = vk.verify_prehash(&digest_vec_bytes, &sig);
+    let res_1 = vk.verify_prehash(&digest_vec_bytes, &normalized_sig);
+    println!("p256 library verify result: {:?}", res);
+    println!("p256 library verify normalized result: {:?}", res_1);
+
+    let fc_sig = Secp256r1Signature::from_bytes(&output).unwrap();
+
+    let normalized = fc_sig.sig.normalize_s().unwrap_or(sig);
+    let fc_sig_normalized =
+        Secp256r1Signature::from_bytes(normalized.to_bytes().as_slice()).unwrap();
+
+    let fc_res = secp_pk.verify(&digest_vec_bytes, &fc_sig);
+    let fc_res_1 = secp_pk.verify(&digest_vec_bytes, &fc_sig_normalized);
+    println!("fastcrypto library verify result: {:?}", fc_res);
     println!(
-        "Normalized Sig Bytes {:?}",
-        Hex::encode(normalized_sig.to_bytes())
+        "fastcrypto library verify normalized result: {:?}",
+        fc_res_1
     );
-    println!("Public Key Compact bytes {:?}", Hex::encode(&pkey_compact));
 
     let mut flag = vec![SignatureScheme::Secp256r1.flag()];
     flag.extend(normalized_sig.to_bytes());
-    flag.extend(pkey_compact);
+    flag.extend(pk_bytes);
 
     let serialized_sig = Base64::encode(&flag);
     println!(

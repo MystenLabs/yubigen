@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 yubikey = "0.8.0" 
 x509 = "0.2.0"
-openssl = "0.10.37"
 fastcrypto = "0.1.7"
 sui-types = {git = "https://github.com/MystenLabs/sui", branch="main" }
 shared-crypto = {git = "https://github.com/MystenLabs/sui", branch="main" }

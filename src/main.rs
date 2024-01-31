@@ -1,9 +1,10 @@
 use anyhow::anyhow;
 use fastcrypto::encoding::{Base64, Encoding, Hex};
-use fastcrypto::hash::{Blake2b256, HashFunction, Sha256};
+use fastcrypto::hash::{Blake2b256, HashFunction, Sha256, Sha3_256};
 use fastcrypto::secp256r1::{Secp256r1PublicKey, Secp256r1Signature};
 use fastcrypto::traits::{ToFromBytes, VerifyingKey};
 use p256::ecdsa::signature::hazmat::PrehashVerifier;
+use p256::ecdsa::signature::Verifier;
 use p256::ecdsa::Signature as p256ECDSA;
 use p256::pkcs8::DecodePublicKey;
 use shared_crypto::intent::{Intent, IntentMessage};
@@ -81,13 +82,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut hasher = Blake2b256::new();
     hasher.update(bcs::to_bytes(&intent_msg)?);
     let digest = hasher.finalize().digest;
-    println!("Digest to sign: {:?}", Hex::encode(digest));
     let digest_vec_bytes = digest.to_vec();
 
+    let mut hasher2 = Sha256::default();
+    hasher2.update(digest);
+    let sha_digest = hasher2.finalize().digest;
+    
     // // Using Default yubikey pin (TODO - add for user input)
     let _ = piv.verify_pin("123456".as_bytes());
 
-    let sig_bytes = sign_data(&mut piv, &digest_vec_bytes, algorithm, slot).unwrap();
+    let sig_bytes = sign_data(&mut piv, &sha_digest, algorithm, slot).unwrap();
     println!("Signature bytes {:?}", sig_bytes);
 
     // the signature is ASN.1 BER encoded, there are 4 forms:
@@ -115,8 +119,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{:?}", sig);
     println!("{:?}", normalized_sig);
 
-    let res = vk.verify_prehash(&digest_vec_bytes, &sig);
-    let res_1 = vk.verify_prehash(&digest_vec_bytes, &normalized_sig);
+    let res = vk.verify(&digest_vec_bytes, &sig);
+    let res_1 = vk.verify(&digest_vec_bytes, &normalized_sig);
     println!("p256 library verify result: {:?}", res);
     println!("p256 library verify normalized result: {:?}", res_1);
 

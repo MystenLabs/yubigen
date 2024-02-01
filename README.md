@@ -1,4 +1,13 @@
-1. Uncomment the generate block around L39-46 to generate a Secp256r1 key in Signature slot of yubikey 9c. Comment out if you do not want to generate a new key.Error: NotFound means you do not have a key generated on the slot
-2. piv.authenticate() L33 uses the default management key - if you have a different management key this needs to be changed out
-3. sign_data() function L98 signs the "hello" message
-4. cargo run
+1. cargo run --help
+```Usage: yubigen <COMMAND>
+
+Commands:
+  generate-key
+  sign
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version```
+
+`cargo run sign --data "<Base64 TX Bytes"` -> Must Generate key before on R13 Slot

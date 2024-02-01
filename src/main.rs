@@ -3,16 +3,13 @@ use fastcrypto::encoding::{Base64, Encoding, Hex};
 use fastcrypto::hash::{Blake2b256, HashFunction, Sha256, Sha3_256};
 use fastcrypto::secp256r1::{Secp256r1PublicKey, Secp256r1Signature};
 use fastcrypto::traits::{ToFromBytes, VerifyingKey};
-use p256::ecdsa::signature::hazmat::PrehashVerifier;
-use p256::ecdsa::Signature as p256ECDSA;
-use p256::pkcs8::DecodePublicKey;
 use shared_crypto::intent::{Intent, IntentMessage};
 use sui_types::transaction::TransactionData;
+use tracing::info;
 
 use clap::{error, Args, Parser, Subcommand};
 use p256::ecdsa::signature::Verifier;
 use sui_types::crypto::SignatureScheme;
-use yubikey::certificate::yubikey_signer::Signer;
 use yubikey::piv::generate;
 use yubikey::piv::sign_data;
 use yubikey::piv::{AlgorithmId, RetiredSlotId, SlotId};
@@ -96,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let algorithm: AlgorithmId = AlgorithmId::EccP256;
 
-            // Tdo Match Input=> RetiredSlotId
+            // Todo Match Input=> RetiredSlotId
             let slot: SlotId = SlotId::Retired(RetiredSlotId::R13);
             println!("Generating Key on Retired Slot 13");
 
@@ -113,7 +110,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Sign(SignData) => {
             let data = &SignData.data;
-            // let data = "AAABACD8TtqP+CanT90KxVMvAJOC0lecAdSsc417t+BpEqpWLwEBAQABAAD2G51i0MOcQq4pZm92cOF4Z8nqYe2H5sDGZRXSmbXv6QEzPXZVjoVvGQKwwGeDpiNXE9bxQ+Z4kCw+BxYodDPLdgDE7wAAAAAAIIRssh7aDT4qMI9t1NQI1CeC9drHQcXQuYhhcJjFiXFZ9hudYtDDnEKuKWZvdnDheGfJ6mHth+bAxmUV0pm17+noAwAAAAAAAICEHgAAAAAAAA==";
             let mut piv: yubikey::YubiKey = yubikey::YubiKey::open()?;
             let slot: SlotId = SlotId::Retired(RetiredSlotId::R13);
 
@@ -133,7 +129,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .expect("ecdsa key expected");
             let binding = vk.to_encoded_point(true);
             let pk_bytes = binding.as_bytes();
-            println!("Public key bytes: {:?}", pk_bytes);
+            info!("Public key bytes: {:?}", pk_bytes);
 
             let secp_pk = Secp256r1PublicKey::from_bytes(pk_bytes).unwrap();
             let mut sui_pk = vec![SignatureScheme::Secp256r1.flag()];
@@ -192,13 +188,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let sig = p256::ecdsa::Signature::from_slice(&output).unwrap();
             let normalized_sig = sig.normalize_s().unwrap_or(sig);
-            println!("{:?}", sig);
-            println!("{:?}", normalized_sig);
+            info!("{:?}", sig);
+            info!("{:?}", normalized_sig);
 
+            // TODO: Remove after refactor
             let res = vk.verify(&digest_vec_bytes, &sig);
             let res_1 = vk.verify(&digest_vec_bytes, &normalized_sig);
-            println!("p256 library verify result: {:?}", res);
-            println!("p256 library verify normalized result: {:?}", res_1);
+            info!("p256 library verify result: {:?}", res);
+            info!("p256 library verify normalized result: {:?}", res_1);
 
             let fc_sig = Secp256r1Signature::from_bytes(&output).unwrap();
 
@@ -208,12 +205,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let fc_res = secp_pk.verify(&digest_vec_bytes, &fc_sig);
             let fc_res_1 = secp_pk.verify(&digest_vec_bytes, &fc_sig_normalized);
-            println!("fastcrypto library verify result: {:?}", fc_res);
-            println!(
+            info!("fastcrypto library verify result: {:?}", fc_res);
+            info!(
                 "fastcrypto library verify normalized result: {:?}",
                 fc_res_1
             );
-
+            // End TODO
             let mut flag = vec![SignatureScheme::Secp256r1.flag()];
             flag.extend(normalized_sig.to_bytes());
             flag.extend(pk_bytes);

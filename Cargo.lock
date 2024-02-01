@@ -5842,6 +5842,7 @@ dependencies = [
  "p256",
  "shared-crypto",
  "sui-types",
+ "tracing",
  "x509",
  "yubikey",
 ]

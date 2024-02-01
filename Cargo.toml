@@ -14,3 +14,4 @@ shared-crypto = {git = "https://github.com/MystenLabs/sui", branch="main" }
 anyhow = "1.0.79"
 bcs = "0.1.6"
 p256 = "0.13.2"
+clap = "4.4.18"

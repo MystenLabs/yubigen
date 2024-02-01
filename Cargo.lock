@@ -5837,6 +5837,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bcs",
+ "clap",
  "fastcrypto 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "p256",
  "shared-crypto",

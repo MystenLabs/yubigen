@@ -1,13 +1,14 @@
 use anyhow::anyhow;
 use fastcrypto::encoding::{Base64, Encoding, Hex};
-use fastcrypto::hash::{Blake2b256, HashFunction, Sha256, Sha3_256};
+use fastcrypto::hash::{Blake2b256, HashFunction, Sha256};
 use fastcrypto::secp256r1::{Secp256r1PublicKey, Secp256r1Signature};
 use fastcrypto::traits::{ToFromBytes, VerifyingKey};
 use shared_crypto::intent::{Intent, IntentMessage};
 use sui_types::transaction::TransactionData;
 use tracing::info;
+use zeroize::ZeroizeOnDrop;
 
-use clap::{error, Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use p256::ecdsa::signature::Verifier;
 use sui_types::crypto::SignatureScheme;
 use yubikey::piv::generate;
@@ -16,9 +17,9 @@ use yubikey::piv::{AlgorithmId, RetiredSlotId, SlotId};
 use yubikey::MgmKey;
 use yubikey::{PinPolicy, TouchPolicy};
 
-// Generates Secp256r1 key on Retired Slot 15 - TouchPolicy cached
+// Generates Secp256r1 key on Retired Slot 13(Default) - TouchPolicy cached
 // Prints our corresponding address
-// Sign whatever base64 serialized tx data blidnly
+// Sign whatever base64 serialized tx data blindly
 // Prints out Sui Signature
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -34,7 +35,7 @@ enum Commands {
     Sign(SignData),
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Clone, ZeroizeOnDrop)]
 struct SignData {
     #[clap(long, short = 'd')]
     // The Serialized TransactionData to be passed for signing
@@ -46,10 +47,8 @@ struct SignData {
     slot: Option<String>,
 }
 
-#[derive(Args, Clone)]
+#[derive(Args, Clone, ZeroizeOnDrop)]
 struct GenKeyArgs {
-    #[clap(long, short = 'p')]
-    pin: Option<String>,
     #[clap(long, short = 's')]
     slot: Option<String>,
     #[clap(long, short = 'm')]
@@ -57,7 +56,7 @@ struct GenKeyArgs {
 }
 impl Commands {
     pub fn from_slot_input(input: u32) -> Option<RetiredSlotId> {
-        match 20 - input + 1 {
+        match input {
             1 => Some(RetiredSlotId::R1),
             2 => Some(RetiredSlotId::R2),
             3 => Some(RetiredSlotId::R3),
@@ -88,14 +87,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match &cli.command {
         Commands::GenerateKey(GenKeyArgs) => {
             let mut piv: yubikey::YubiKey = yubikey::YubiKey::open()?;
-            let slot: SlotId;
-            piv.authenticate(MgmKey::default())?;
-
             let algorithm: AlgorithmId = AlgorithmId::EccP256;
+            let slot_id = match GenKeyArgs.slot.as_ref().and_then(|s| s.parse::<u32>().ok()) {
+                Some(input) => Commands::from_slot_input(input)
+                    .ok_or_else(|| anyhow!("Invalid slot number"))?,
+                None => RetiredSlotId::R13, // Default to R13 if no slot is provided
+            };
+            let slot: SlotId = SlotId::Retired(slot_id);
+            let m_key = match &GenKeyArgs.mgmt_key {
+                Some(m) => MgmKey::from_bytes(m.as_str()),
+                None => Ok(MgmKey::default()),
+            };
 
-            // Todo Match Input=> RetiredSlotId
-            let slot: SlotId = SlotId::Retired(RetiredSlotId::R13);
-            println!("Generating Key on Retired Slot 13");
+            piv.authenticate(m_key?);
+
+            println!("Generating Key on {:?}", slot);
 
             let p = generate(
                 &mut piv,
@@ -104,15 +110,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 PinPolicy::Once,
                 TouchPolicy::Cached,
             )?;
-            println!("Key generated successfully in slot 13");
+            println!("Key generated successfully");
             println!("Public key: {:?}", p);
             Ok(())
         }
         Commands::Sign(SignData) => {
             let data = &SignData.data;
             let mut piv: yubikey::YubiKey = yubikey::YubiKey::open()?;
-            let slot: SlotId = SlotId::Retired(RetiredSlotId::R13);
-
+            // let slot: SlotId = SlotId::Retired(RetiredSlotId::R13);
+            let slot_id = match SignData.slot.as_ref().and_then(|s| s.parse::<u32>().ok()) {
+                Some(input) => Commands::from_slot_input(input)
+                    .ok_or_else(|| anyhow!("Invalid slot number"))?,
+                None => RetiredSlotId::R13, // Default to R13 if no slot is provided
+            };
+            let slot: SlotId = SlotId::Retired(slot_id);
             let algorithm: AlgorithmId = AlgorithmId::EccP256;
 
             let metadata = yubikey::piv::metadata(&mut piv, slot)?;
@@ -159,8 +170,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // println!("Digest to sign: {:?}", Hex::encode(digest));
             let digest_vec_bytes = digest.to_vec();
 
-            // // Using Default yubikey pin (TODO - add for user input)
-            let _ = piv.verify_pin("123456".as_bytes());
+            let pin = match &SignData.pin {
+                Some(p) => p.as_str(),
+                None => "123456", // Default PIN
+            };
+
+            let _ = piv.verify_pin(pin.as_bytes());
 
             //let sig_bytes = sign_data(&mut piv, &digest_vec_bytes, algorithm, slot).unwrap();
             let sig_bytes = sign_data(&mut piv, &sha_digest, algorithm, slot).unwrap();

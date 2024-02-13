@@ -21,6 +21,7 @@ use yubikey::{PinPolicy, TouchPolicy};
 // Prints our corresponding address
 // Sign whatever base64 serialized tx data blindly
 // Prints out Sui Signature
+// Requires Yubikey firmware > 5.3
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]

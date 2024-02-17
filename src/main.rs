@@ -54,6 +54,8 @@ struct GenKeyArgs {
     slot: Option<String>,
     #[clap(long, short = 'm')]
     mgmt_key: Option<String>,
+    #[clap(long, short = 'f')]
+    force: bool,
 }
 impl Commands {
     pub fn from_slot_input(input: u32) -> Option<RetiredSlotId> {
@@ -100,8 +102,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 None => Ok(MgmKey::default()),
             };
 
-            piv.authenticate(m_key?);
-
+            let _ = piv.authenticate(m_key?);
+            let existing_data = yubikey::piv::metadata(&mut piv, slot).ok();
+            if existing_data.is_some() && !GenKeyArgs.force {
+                return Err(anyhow!(
+                    "Key already exists in the specified slot {}. Use --force to overwrite.",
+                    slot
+                )
+                .into());
+            }
             println!("Generating Key on {:?}", slot);
 
             let p = generate(
@@ -109,10 +118,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 slot,
                 algorithm,
                 PinPolicy::Once,
-                TouchPolicy::Cached,
+                TouchPolicy::Always,
             )?;
             println!("Key generated successfully");
-            println!("Public key: {:?}", p);
+            info!("Public key: {:?}", p);
+
+            // TODO convert publickey->SuiAddress impl
+            let public_key_bytes = p
+                .subject_public_key
+                .as_bytes()
+                .ok_or_else(|| anyhow!("Public key bytes could not be retrieved."))?;
+            let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(public_key_bytes)
+                .expect("ecdsa key expected");
+            let binding = vk.to_encoded_point(true);
+            let pk_bytes = binding.as_bytes();
+            info!("Public key bytes: {:?}", pk_bytes);
+
+            let secp_pk = Secp256r1PublicKey::from_bytes(pk_bytes).unwrap();
+            let mut sui_pk = vec![SignatureScheme::Secp256r1.flag()];
+            sui_pk.extend(secp_pk.as_ref());
+
+            let mut suiaddress_hash = Blake2b256::new();
+            suiaddress_hash.update(sui_pk);
+            let sui_address = suiaddress_hash.finalize().digest;
+
+            println!("Sui Address: 0x{}", Hex::encode(sui_address));
             Ok(())
         }
         Commands::Sign(SignData) => {

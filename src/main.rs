@@ -209,6 +209,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _ = piv.verify_pin(pin.as_bytes());
 
             //let sig_bytes = sign_data(&mut piv, &digest_vec_bytes, algorithm, slot).unwrap();
+            println!("[*] Please touch your yubikey....")
             let sig_bytes = sign_data(&mut piv, &sha_digest, algorithm, slot).unwrap();
             println!("Signature bytes {:?}", sig_bytes);
 

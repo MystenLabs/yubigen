@@ -33,11 +33,11 @@ struct Cli {
 enum Commands {
     // Generate Key by default on RetiredSlot13, use --slot-id to choose retired slot 1-20
     GenerateKey(GenKeyArgs),
-    Sign(SignData),
+    Sign(SignArgs),
 }
 
 #[derive(Args, Clone, ZeroizeOnDrop)]
-struct SignData {
+struct SignArgs {
     #[clap(long, short = 'd')]
     // The Serialized TransactionData to be passed for signing
     data: String,
@@ -57,6 +57,7 @@ struct GenKeyArgs {
     #[clap(long, short = 'f')]
     force: bool,
 }
+
 impl Commands {
     pub fn from_slot_input(input: u32) -> Option<RetiredSlotId> {
         match input {
@@ -88,23 +89,23 @@ impl Commands {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     match &cli.command {
-        Commands::GenerateKey(GenKeyArgs) => {
+        Commands::GenerateKey(gen_key_args) => {
             let mut piv: yubikey::YubiKey = yubikey::YubiKey::open()?;
             let algorithm: AlgorithmId = AlgorithmId::EccP256;
-            let slot_id = match GenKeyArgs.slot.as_ref().and_then(|s| s.parse::<u32>().ok()) {
+            let slot_id = match gen_key_args.slot.as_ref().and_then(|s| s.parse::<u32>().ok()) {
                 Some(input) => Commands::from_slot_input(input)
                     .ok_or_else(|| anyhow!("Invalid slot number"))?,
                 None => RetiredSlotId::R13, // Default to R13 if no slot is provided
             };
             let slot: SlotId = SlotId::Retired(slot_id);
-            let m_key = match &GenKeyArgs.mgmt_key {
+            let m_key = match &gen_key_args.mgmt_key {
                 Some(m) => MgmKey::from_bytes(m.as_str()),
                 None => Ok(MgmKey::default()),
             };
 
             let _ = piv.authenticate(m_key?);
             let existing_data = yubikey::piv::metadata(&mut piv, slot).ok();
-            if existing_data.is_some() && !GenKeyArgs.force {
+            if existing_data.is_some() && !gen_key_args.force {
                 return Err(anyhow!(
                     "Key already exists in the specified slot {}. Use --force to overwrite.",
                     slot
@@ -145,11 +146,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Sui Address: 0x{}", Hex::encode(sui_address));
             Ok(())
         }
-        Commands::Sign(SignData) => {
-            let data = &SignData.data;
+        Commands::Sign(sign_args) => {
+            let data = &sign_args.data;
             let mut piv: yubikey::YubiKey = yubikey::YubiKey::open()?;
             // let slot: SlotId = SlotId::Retired(RetiredSlotId::R13);
-            let slot_id = match SignData.slot.as_ref().and_then(|s| s.parse::<u32>().ok()) {
+            let slot_id = match sign_args.slot.as_ref().and_then(|s| s.parse::<u32>().ok()) {
                 Some(input) => Commands::from_slot_input(input)
                     .ok_or_else(|| anyhow!("Invalid slot number"))?,
                 None => RetiredSlotId::R13, // Default to R13 if no slot is provided
@@ -201,14 +202,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // println!("Digest to sign: {:?}", Hex::encode(digest));
             let digest_vec_bytes = digest.to_vec();
 
-            let pin = match &SignData.pin {
+            let pin = match &sign_args.pin {
                 Some(p) => p.as_str(),
                 None => "123456", // Default PIN
             };
 
             let _ = piv.verify_pin(pin.as_bytes());
 
-            //let sig_bytes = sign_data(&mut piv, &digest_vec_bytes, algorithm, slot).unwrap();
             println!("[*] Please touch your yubikey....");
             let sig_bytes = sign_data(&mut piv, &sha_digest, algorithm, slot).unwrap();
             println!("Signature bytes {:?}", sig_bytes);

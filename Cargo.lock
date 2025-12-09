@@ -6729,6 +6729,7 @@ name = "yubigen"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "bcs",
  "clap",
  "fastcrypto 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",

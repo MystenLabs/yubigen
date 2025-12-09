@@ -29,6 +29,8 @@ pub enum Commands {
     GenerateKey(GenKeyArgs),
     Sign(SignArgs),
     Call,
+    // Prints the Sui Address for the key in the given slot (default R13)
+    Address(AddressArgs),
 }
 
 #[derive(Args, Clone, ZeroizeOnDrop)]
@@ -39,6 +41,12 @@ pub struct SignArgs {
     #[clap(long, short = 'p')]
     // Pin of your yubikey, uses default if not provided
     pub pin: Option<String>,
+    #[clap(long, short = 's')]
+    pub slot: Option<String>,
+}
+
+#[derive(Args, Clone, ZeroizeOnDrop)]
+pub struct AddressArgs {
     #[clap(long, short = 's')]
     pub slot: Option<String>,
 }
@@ -101,6 +109,22 @@ pub fn execute(cli: Cli, device: Box<dyn SmartCard>) -> Result<(), Box<dyn std::
             let reader = io::stdin();
             let buf_reader = io::BufReader::new(reader);
             process_call_command(&mut handler, buf_reader)
+        }
+        Commands::Address(address_args) => {
+            let slot_id = match address_args
+                .slot
+                .as_ref()
+                .and_then(|s| s.parse::<u32>().ok())
+            {
+                Some(input) => {
+                    from_slot_input(input).ok_or_else(|| anyhow!("Invalid slot number"))?
+                }
+                None => RetiredSlotId::R13, // Default to R13 if no slot is provided
+            };
+            let slot: SlotId = SlotId::Retired(slot_id);
+            let response = handler.get_public_key(slot)?;
+            println!("{}", response.sui_address);
+            Ok(())
         }
     }
 }
@@ -521,5 +545,23 @@ mod tests {
         // We can capture stdout if we really want to check the output, but for now we check it returns Ok
         let result = process_call_command(&mut handler, cursor);
         assert!(result.is_ok());
+    }
+    #[test]
+    fn test_execute_address() {
+        let mut mock_device = MockSmartCard::new();
+        mock_device
+            .expect_metadata()
+            .with(eq(SlotId::Retired(RetiredSlotId::R13)))
+            .returning(|_| {
+                Ok(DeviceMetadata {
+                    public_key: VALID_PUBKEY.to_vec(),
+                })
+            });
+
+        let cli = Cli {
+            command: Commands::Address(AddressArgs { slot: None }),
+        };
+
+        execute(cli, Box::new(mock_device)).unwrap();
     }
 }

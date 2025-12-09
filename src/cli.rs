@@ -25,11 +25,13 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    // Generate Key by default on RetiredSlot13, use --slot-id to choose retired slot 1-20
+    /// Generate Key by default on RetiredSlot13, use --slot-id to choose retired slot 1-20
     GenerateKey(GenKeyArgs),
+    /// Sign a transaction digest
     Sign(SignArgs),
+    /// JSON-RPC mode for integration with Sui CLI (reads from stdin)
     Call,
-    // Prints the Sui Address for the key in the given slot (default R13)
+    /// Prints the Sui Address for the key in the given slot (default R13)
     Address(AddressArgs),
 }
 

@@ -17,7 +17,7 @@ cargo install --path .
 Install the `external-keys-cli-support` branch of the Sui CLI to use the external keys feature.
 
 ```bash
-suiup install --nightly external-keys-cli-support
+suiup install --nightly external-keys-cli-support sui
 ```
 
 ## Yubigen CLI Commands

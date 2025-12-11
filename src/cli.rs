@@ -1,6 +1,6 @@
 use crate::types::*;
 use crate::yubikey_handler::{
-    from_slot_input, resolve_pin, SmartCard, YubiKeyHandler, YubiKeyInteractor,
+    from_slot_input, resolve_pin, SmartCard, YubiKeyHandler,
 };
 use anyhow::{anyhow, Context};
 use clap::{Args, Parser, Subcommand};

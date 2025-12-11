@@ -1,4 +1,3 @@
-use crate::types::PublicKeyResponse;
 use anyhow::Error;
 pub use device::YubiKeyHandler;
 use mockall::automock;
@@ -9,17 +8,6 @@ use yubikey::piv::SlotId;
 use yubikey::{MgmKey, PinPolicy, TouchPolicy};
 
 pub mod device;
-
-pub trait YubiKeyInteractor {
-    fn generate_key(
-        &mut self,
-        slot: SlotId,
-        mgmt_key: Option<MgmKey>,
-        force: bool,
-    ) -> Result<(), Error>;
-    fn get_public_key(&mut self, slot: SlotId) -> Result<PublicKeyResponse, Error>;
-    fn sign_transaction(&mut self, slot: SlotId, data: &str, pin: &str) -> Result<String, Error>;
-}
 
 #[derive(Debug, Clone)]
 pub struct DeviceMetadata {

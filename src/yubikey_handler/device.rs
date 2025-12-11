@@ -1,4 +1,4 @@
-use super::{DeviceMetadata, GeneratedKeyInfo, SmartCard, YubiKeyInteractor};
+use super::{DeviceMetadata, GeneratedKeyInfo, SmartCard};
 use crate::types::*;
 use anyhow::{anyhow, Error};
 use fastcrypto::encoding::{Base64, Encoding, Hex};
@@ -82,10 +82,7 @@ impl YubiKeyHandler {
     pub fn new_with_device(device: Box<dyn SmartCard>, verbose: bool) -> Self {
         Self { device, verbose }
     }
-}
-
-impl YubiKeyInteractor for YubiKeyHandler {
-    fn generate_key(
+    pub fn generate_key(
         &mut self,
         slot: SlotId,
         mgmt_key: Option<MgmKey>,
@@ -138,7 +135,7 @@ impl YubiKeyInteractor for YubiKeyHandler {
         Ok(())
     }
 
-    fn get_public_key(&mut self, slot: SlotId) -> Result<PublicKeyResponse, Error> {
+    pub fn get_public_key(&mut self, slot: SlotId) -> Result<PublicKeyResponse, Error> {
         let metadata = self.device.metadata(slot)?;
         // Metadata now directly contains public key bytes (DeviceMetadata)
 
@@ -170,7 +167,7 @@ impl YubiKeyInteractor for YubiKeyHandler {
         })
     }
 
-    fn sign_transaction(&mut self, slot: SlotId, data: &str, pin: &str) -> Result<String, Error> {
+    pub fn sign_transaction(&mut self, slot: SlotId, data: &str, pin: &str) -> Result<String, Error> {
         let algorithm = AlgorithmId::EccP256;
 
         // Check if key exists (implicitly by getting metadata)

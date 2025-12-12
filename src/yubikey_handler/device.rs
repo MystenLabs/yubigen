@@ -135,6 +135,10 @@ impl YubiKeyHandler {
         Ok(())
     }
 
+    pub fn metadata(&mut self, slot: SlotId) -> Result<DeviceMetadata, Error> {
+        self.device.metadata(slot)
+    }
+
     pub fn get_public_key(&mut self, slot: SlotId) -> Result<PublicKeyResponse, Error> {
         let metadata = self.device.metadata(slot)?;
         // Metadata now directly contains public key bytes (DeviceMetadata)

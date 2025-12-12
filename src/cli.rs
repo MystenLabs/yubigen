@@ -1,7 +1,5 @@
 use crate::types::*;
-use crate::yubikey_handler::{
-    from_slot_input, resolve_pin, SmartCard, YubiKeyHandler,
-};
+use crate::yubikey_handler::{from_slot_input, resolve_pin, SmartCard, YubiKeyHandler};
 use anyhow::{anyhow, Context};
 use clap::{Args, Parser, Subcommand};
 use serde_json::{json, Value};
@@ -33,6 +31,8 @@ pub enum Commands {
     Call,
     /// Prints the Sui Address for the key in the given slot (default R13)
     Address(AddressArgs),
+    /// Prints slot information
+    Slot(SlotArgs),
 }
 
 #[derive(Args, Clone, ZeroizeOnDrop)]
@@ -49,6 +49,12 @@ pub struct SignArgs {
 
 #[derive(Args, Clone, ZeroizeOnDrop)]
 pub struct AddressArgs {
+    #[clap(long, short = 's')]
+    pub slot: Option<String>,
+}
+
+#[derive(Args, Clone, ZeroizeOnDrop)]
+pub struct SlotArgs {
     #[clap(long, short = 's')]
     pub slot: Option<String>,
 }
@@ -111,6 +117,24 @@ pub fn execute(cli: Cli, device: Box<dyn SmartCard>) -> Result<(), Box<dyn std::
             let reader = io::stdin();
             let buf_reader = io::BufReader::new(reader);
             process_call_command(&mut handler, buf_reader)
+        }
+        Commands::Slot(slot_args) => {
+            let slot_id = match slot_args
+                .slot
+                .as_ref()
+                .and_then(|s| s.parse::<u32>().ok())
+            {
+                Some(input) => {
+                    from_slot_input(input).ok_or_else(|| anyhow!("Invalid slot number"))?
+                }
+                None => RetiredSlotId::R13, // Default to R13 if no slot is provided
+            };
+            let slot: SlotId = SlotId::Retired(slot_id);
+            let response = handler.metadata(slot).map_err(|e| {
+                anyhow!("Failed to get slot metadata: {}", e)
+            })?;
+            println!("Slot: {:?}", response);
+            Ok(())
         }
         Commands::Address(address_args) => {
             let slot_id = match address_args
@@ -216,6 +240,18 @@ fn handle_request(
                 .ok_or_else(|| anyhow!("Invalid key_id"))?;
             let slot = SlotId::Retired(slot_id);
             Ok(serde_json::to_value(handler.get_public_key(slot)?)?)
+        }
+        "create_key" => {
+            for i in 1..=20 {
+                if let Some(slot_id) = from_slot_input(i) {
+                    let slot = SlotId::Retired(slot_id);
+                    if handler.get_public_key(slot).is_err() {
+                        handler.generate_key(slot, None, false)?;
+                        return Ok(serde_json::to_value(handler.get_public_key(slot)?)?);
+                    }
+                }
+            }
+            Err(anyhow!("No available slots found"))
         }
         _ => Err(anyhow!("Invalid method: {}", method)),
     }
@@ -565,5 +601,62 @@ mod tests {
         };
 
         execute(cli, Box::new(mock_device)).unwrap();
+    }
+    #[test]
+    fn test_handle_request_create() {
+        let mut mock_device = MockSmartCard::new();
+
+        let should_succeed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let s = should_succeed.clone();
+
+        // R1 is used
+        mock_device
+            .expect_metadata()
+            .with(eq(SlotId::Retired(RetiredSlotId::R1)))
+            .returning(|_| {
+                Ok(DeviceMetadata {
+                    public_key: VALID_PUBKEY.to_vec(),
+                })
+            });
+
+        // R2 is initially unused (returns Err), then used (returns Ok)
+        mock_device
+            .expect_metadata()
+            .with(eq(SlotId::Retired(RetiredSlotId::R2)))
+            .returning(move |_| {
+                if s.load(std::sync::atomic::Ordering::SeqCst) {
+                    Ok(DeviceMetadata {
+                        public_key: VALID_PUBKEY.to_vec(),
+                    })
+                } else {
+                    Err(anyhow::anyhow!("Not found").into())
+                }
+            });
+
+        mock_device.expect_authenticate().returning(|_| Ok(()));
+
+        let s2 = should_succeed.clone();
+        mock_device
+            .expect_generate()
+            .with(
+                eq(SlotId::Retired(RetiredSlotId::R2)),
+                always(),
+                always(),
+                always(),
+            )
+            .times(1)
+            .returning(move |_, _, _, _| {
+                s2.store(true, std::sync::atomic::Ordering::SeqCst);
+                Ok(GeneratedKeyInfo {
+                    public_key: VALID_PUBKEY.to_vec(),
+                })
+            });
+
+        let mut handler = YubiKeyHandler::new_with_device(Box::new(mock_device), false);
+        let params = json!({});
+
+        let result = handle_request(&mut handler, "create", params).unwrap();
+        let resp: PublicKeyResponse = serde_json::from_value(result).unwrap();
+        assert_eq!(resp.key_id, "2");
     }
 }

@@ -655,7 +655,7 @@ mod tests {
         let mut handler = YubiKeyHandler::new_with_device(Box::new(mock_device), false);
         let params = json!({});
 
-        let result = handle_request(&mut handler, "create", params).unwrap();
+        let result = handle_request(&mut handler, "create_key", params).unwrap();
         let resp: PublicKeyResponse = serde_json::from_value(result).unwrap();
         assert_eq!(resp.key_id, "2");
     }

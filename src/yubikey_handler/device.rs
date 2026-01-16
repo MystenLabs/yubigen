@@ -9,7 +9,6 @@ use shared_crypto::intent::{Intent, IntentMessage};
 use sui_types::crypto::SignatureScheme;
 use sui_types::transaction::TransactionData;
 use tracing::info;
-use base64::{Engine as _, engine::general_purpose};
 use yubikey::piv::{generate, sign_data, AlgorithmId, SlotId};
 use yubikey::{MgmKey, PinPolicy, TouchPolicy, YubiKey};
 
@@ -160,7 +159,7 @@ impl YubiKeyHandler {
             .replace("Retired(R", "")
             .replace(")", "");
 
-        let public_key_b64 = general_purpose::STANDARD.encode(pk_bytes);
+        let public_key_b64 = Base64::encode(pk_bytes);
 
         Ok(PublicKeyResponse {
             key_id,

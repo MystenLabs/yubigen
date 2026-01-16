@@ -223,9 +223,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.86"
+version = "1.0.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3d1d046238990b9cf5bcde22a3fb3584ee5cf65fb2765f454ed428c7a0063da"
+checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
 name = "ark-bls12-381"
@@ -1142,7 +1142,7 @@ name = "consensus-config"
 version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui?branch=main#d02aba1d4d83ab2f19ca4dcd5298e403a482caa8"
 dependencies = [
- "fastcrypto 0.1.8 (git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597)",
+ "fastcrypto 0.1.8",
  "mysten-network",
  "rand",
  "serde",
@@ -1704,58 +1704,6 @@ dependencies = [
 [[package]]
 name = "fastcrypto"
 version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f9ea2139faa96e4d713803b7777b8fd2d5c245858b1644c08d3220f407149c6"
-dependencies = [
- "ark-ec",
- "ark-ff",
- "ark-secp256r1",
- "ark-serialize",
- "auto_ops",
- "base64ct",
- "bech32",
- "bincode",
- "blake2",
- "blst",
- "bs58 0.4.0",
- "curve25519-dalek-ng",
- "derive_more",
- "digest 0.10.7",
- "ecdsa",
- "ed25519-consensus",
- "elliptic-curve",
- "eyre",
- "fastcrypto-derive 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "generic-array",
- "hex",
- "hex-literal",
- "hkdf",
- "lazy_static",
- "num-bigint 0.4.6",
- "once_cell",
- "p256",
- "rand",
- "readonly",
- "rfc6979",
- "rsa 0.8.2",
- "schemars",
- "secp256k1",
- "serde",
- "serde_json",
- "serde_with 2.3.3",
- "sha2 0.10.8",
- "sha3",
- "signature 2.2.0",
- "static_assertions",
- "thiserror",
- "tokio",
- "typenum",
- "zeroize",
-]
-
-[[package]]
-name = "fastcrypto"
-version = "0.1.8"
 source = "git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597#5f2c63266a065996d53f98156f0412782b468597"
 dependencies = [
  "aes",
@@ -1796,7 +1744,58 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde_json",
- "serde_with 3.9.0",
+ "serde_with",
+ "sha2 0.10.8",
+ "sha3",
+ "signature 2.2.0",
+ "static_assertions",
+ "thiserror",
+ "tokio",
+ "typenum",
+ "zeroize",
+]
+
+[[package]]
+name = "fastcrypto"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e06674cac3bf7ec9a951971285e6051a45273dc4e265cca27c02a0d4ebcb46f8"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-secp256r1",
+ "ark-serialize",
+ "auto_ops",
+ "base64ct",
+ "bech32",
+ "bincode",
+ "blake2",
+ "blst",
+ "bs58 0.4.0",
+ "curve25519-dalek-ng",
+ "derive_more",
+ "digest 0.10.7",
+ "ecdsa",
+ "ed25519-consensus",
+ "elliptic-curve",
+ "fastcrypto-derive 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "generic-array",
+ "hex",
+ "hex-literal",
+ "hkdf",
+ "lazy_static",
+ "num-bigint 0.4.6",
+ "once_cell",
+ "p256",
+ "rand",
+ "readonly",
+ "rfc6979",
+ "rsa 0.8.2",
+ "schemars",
+ "secp256k1",
+ "serde",
+ "serde_json",
+ "serde_with",
  "sha2 0.10.8",
  "sha3",
  "signature 2.2.0",
@@ -1835,7 +1834,7 @@ source = "git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f9
 dependencies = [
  "bcs",
  "digest 0.10.7",
- "fastcrypto 0.1.8 (git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597)",
+ "fastcrypto 0.1.8",
  "hex",
  "itertools 0.10.5",
  "rand",
@@ -1863,7 +1862,7 @@ dependencies = [
  "blst",
  "byte-slice-cast",
  "derive_more",
- "fastcrypto 0.1.8 (git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597)",
+ "fastcrypto 0.1.8",
  "ff",
  "im",
  "itertools 0.12.1",
@@ -3442,7 +3441,7 @@ source = "git+https://github.com/MystenLabs/sui?branch=main#d02aba1d4d83ab2f19ca
 dependencies = [
  "cfg-if",
  "ed25519-consensus",
- "fastcrypto 0.1.8 (git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597)",
+ "fastcrypto 0.1.8",
  "fastcrypto-tbls",
  "hashbrown 0.12.3",
  "impl-trait-for-tuples",
@@ -3469,7 +3468,7 @@ name = "narwhal-config"
 version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui?branch=main#d02aba1d4d83ab2f19ca4dcd5298e403a482caa8"
 dependencies = [
- "fastcrypto 0.1.8 (git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597)",
+ "fastcrypto 0.1.8",
  "match_opt",
  "mysten-network",
  "mysten-util-mem",
@@ -3487,7 +3486,7 @@ version = "0.1.0"
 source = "git+https://github.com/MystenLabs/sui?branch=main#d02aba1d4d83ab2f19ca4dcd5298e403a482caa8"
 dependencies = [
  "bcs",
- "fastcrypto 0.1.8 (git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597)",
+ "fastcrypto 0.1.8",
  "serde",
  "shared-crypto",
 ]
@@ -5049,16 +5048,16 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.145"
+version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "402a6f66d8c709116cf22f558eab210f5a50187f702eb4d7e5ef38d9a7f1c79c"
+checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
 dependencies = [
  "indexmap 2.4.0",
  "itoa",
  "memchr",
- "ryu",
  "serde",
  "serde_core",
+ "zmij",
 ]
 
 [[package]]
@@ -5096,22 +5095,6 @@ dependencies = [
 
 [[package]]
 name = "serde_with"
-version = "2.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07ff71d2c147a7b57362cead5e22f772cd52f6ab31cfcd9edcd7f6aeb2a0afbe"
-dependencies = [
- "base64 0.13.1",
- "chrono",
- "hex",
- "indexmap 1.9.3",
- "serde",
- "serde_json",
- "serde_with_macros 2.3.3",
- "time",
-]
-
-[[package]]
-name = "serde_with"
 version = "3.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69cecfa94848272156ea67b2b1a53f20fc7bc638c4a46d2f8abde08f05f4b857"
@@ -5124,20 +5107,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "serde_with_macros 3.9.0",
+ "serde_with_macros",
  "time",
-]
-
-[[package]]
-name = "serde_with_macros"
-version = "2.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
-dependencies = [
- "darling 0.20.10",
- "proc-macro2 1.0.86",
- "quote 1.0.37",
- "syn 2.0.87",
 ]
 
 [[package]]
@@ -5166,11 +5137,12 @@ dependencies = [
 
 [[package]]
 name = "serial_test"
-version = "3.2.0"
+version = "3.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b258109f244e1d6891bf1053a55d63a5cd4f8f4c30cf9a1280989f80e7a1fa9"
+checksum = "0d0b343e184fc3b7bb44dff0705fffcf4b3756ba6aff420dddd8b24ca145e555"
 dependencies = [
- "futures",
+ "futures-executor",
+ "futures-util",
  "log",
  "once_cell",
  "parking_lot",
@@ -5180,9 +5152,9 @@ dependencies = [
 
 [[package]]
 name = "serial_test_derive"
-version = "3.2.0"
+version = "3.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d69265a08751de7844521fd15003ae0a888e035773ba05695c5c759a6f89eef"
+checksum = "6f50427f258fb77356e4cd4aa0e87e2bd2c66dbcee41dc405282cae2bfc26c83"
 dependencies = [
  "proc-macro2 1.0.86",
  "quote 1.0.37",
@@ -5254,7 +5226,7 @@ source = "git+https://github.com/MystenLabs/sui?branch=main#d02aba1d4d83ab2f19ca
 dependencies = [
  "bcs",
  "eyre",
- "fastcrypto 0.1.8 (git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597)",
+ "fastcrypto 0.1.8",
  "serde",
  "serde_repr",
 ]
@@ -5516,7 +5488,7 @@ dependencies = [
  "move-vm-config",
  "schemars",
  "serde",
- "serde_with 3.9.0",
+ "serde_with",
  "sui-protocol-config-macros",
  "tracing",
 ]
@@ -5547,7 +5519,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "serde_with 3.9.0",
+ "serde_with",
  "winnow",
 ]
 
@@ -5569,7 +5541,7 @@ dependencies = [
  "derive_more",
  "enum_dispatch",
  "eyre",
- "fastcrypto 0.1.8 (git+https://github.com/MystenLabs/fastcrypto?rev=5f2c63266a065996d53f98156f0412782b468597)",
+ "fastcrypto 0.1.8",
  "fastcrypto-tbls",
  "fastcrypto-zkp",
  "im",
@@ -5606,7 +5578,7 @@ dependencies = [
  "serde",
  "serde-name",
  "serde_json",
- "serde_with 3.9.0",
+ "serde_with",
  "shared-crypto",
  "signature 1.6.4",
  "static_assertions",
@@ -6028,9 +6000,9 @@ checksum = "8df9b6e13f2d32c91b9bd719c00d1958837bc7dec474d94952798cc8e69eeec3"
 
 [[package]]
 name = "tracing"
-version = "0.1.40"
+version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3523ab5a71916ccf420eebdf5521fcef02141234bbc0b8a49f2fdc4544364ef"
+checksum = "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100"
 dependencies = [
  "log",
  "pin-project-lite",
@@ -6040,9 +6012,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.27"
+version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34704c8d6ebcbc939824180af020566b01a7c01f80641264eba0999f6c2b6be7"
+checksum = "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da"
 dependencies = [
  "proc-macro2 1.0.86",
  "quote 1.0.37",
@@ -6051,9 +6023,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.32"
+version = "0.1.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c06d3da6113f116aaee68e4d601191614c9053067f9ab7f6edbcb161237daa54"
+checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
 ]
@@ -6729,10 +6701,9 @@ name = "yubigen"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
  "bcs",
  "clap",
- "fastcrypto 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fastcrypto 0.1.9",
  "mockall",
  "p256",
  "serde",
@@ -6801,9 +6772,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.8.1"
+version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ced3678a2879b30306d323f4542626697a464a97c0a07c9aebf7ebca65cd4dde"
+checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
 dependencies = [
  "zeroize_derive",
 ]
@@ -6818,6 +6789,12 @@ dependencies = [
  "quote 1.0.37",
  "syn 2.0.87",
 ]
+
+[[package]]
+name = "zmij"
+version = "1.0.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd8f3f50b848df28f887acb68e41201b5aea6bc8a8dacc00fb40635ff9a72fea"
 
 [[package]]
 name = "zstd"
